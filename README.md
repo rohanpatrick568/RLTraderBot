@@ -1,0 +1,2 @@
+# RLTraderBot
+ This project leverages Proximal Policy Optimization (PPO) algorithms to create an autonomous trading bot for day trading. Utilizing historical price data, the bot makes informed buy and sell decisions based on patterns it identifies. By integrating Lumibot strategies and backtesting capabilities with Yahoo Finance data, this bot aims to optimize trading performance and minimize risk. The bot is designed to trade a specified stock (e.g., AAPL) and dynamically adjust its strategy using reinforcement learning techniques.
