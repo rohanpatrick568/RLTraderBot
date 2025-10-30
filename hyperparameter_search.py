@@ -15,34 +15,60 @@ import time
 
 import gymnasium as gym
 import gym_anytrading
+from gymnasium import spaces
+import numpy as np
+
+
+class FlattenObservation(gym.ObservationWrapper):
+    """Wrapper to flatten the observation space."""
+    def __init__(self, env):
+        super().__init__(env)
+        # Flatten the observation space
+        obs_shape = env.observation_space.shape
+        self.observation_space = spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(np.prod(obs_shape),),
+            dtype=np.float32
+        )
+    
+    def observation(self, observation):
+        return observation.flatten()
 
 from stable_baselines3 import PPO
 from stable_baselines3.common.evaluation import evaluate_policy
+from stable_baselines3.common.vec_env import DummyVecEnv
 
-import yfinance as yf
+import pandas as pd
 
 
-def get_data_features(ticker, start_date, end_date, interval='1h'):
+def get_data_features(ticker=None, start_date=None, end_date=None, interval='1h'):
     """
-    Fetch historical stock data for a given ticker.
+    Generate synthetic stock data for testing purposes.
     
     Args:
-        ticker: Stock symbol (e.g., 'AAPL')
-        start_date: Start date for historical data
-        end_date: End date for historical data
-        interval: Data interval (default: '1h')
+        ticker: Stock symbol (e.g., 'AAPL') - not used for synthetic data
+        start_date: Start date for historical data - not used for synthetic data
+        end_date: End date for historical data - not used for synthetic data
+        interval: Data interval (default: '1h') - not used for synthetic data
     
     Returns:
-        DataFrame with historical stock data
+        DataFrame with synthetic stock data (using built-in dataset)
     """
-    data = yf.Ticker(ticker).history(start=start_date, end=end_date, interval=interval)
-    data.dropna(inplace=True)
-    return data
+    # Use built-in dataset from gym_anytrading
+    from gym_anytrading.datasets import STOCKS_GOOGL
+    
+    # Create DataFrame with proper column names
+    df = pd.DataFrame(STOCKS_GOOGL)
+    df.columns = ['Date', 'Open', 'High', 'Low', 'Close', 'Volume']
+    df = df.set_index('Date')
+    
+    return df
 
 
 def create_trading_env(df, window_size, frame_bound):
     """
-    Create a trading environment using gym_anytrading.
+    Create a trading environment using gym_anytrading with flattened observations.
     
     Args:
         df: DataFrame with historical stock data
@@ -50,7 +76,7 @@ def create_trading_env(df, window_size, frame_bound):
         frame_bound: Tuple defining the range of data to use
     
     Returns:
-        Trading environment
+        Trading environment with flattened observations
     """
     environment = gym.make(
         'stocks-v0',
@@ -58,10 +84,12 @@ def create_trading_env(df, window_size, frame_bound):
         window_size=window_size,
         frame_bound=frame_bound
     )
+    # Wrap to flatten observations
+    environment = FlattenObservation(environment)
     return environment
 
 
-def train_and_evaluate_model(env, policy_kwargs, total_timesteps=50000, n_eval_episodes=5):
+def train_and_evaluate_model(env, policy_kwargs, total_timesteps=100000, n_eval_episodes=10):
     """
     Train a PPO model with specific hyperparameters and evaluate its performance.
     
@@ -72,23 +100,52 @@ def train_and_evaluate_model(env, policy_kwargs, total_timesteps=50000, n_eval_e
         n_eval_episodes: Number of episodes to evaluate the model
     
     Returns:
-        Dictionary with mean reward, std reward, and training time
+        Dictionary with mean reward, std reward, training time, and episode info
     """
     start_time = time.time()
     
-    # Create and train the model
-    model = PPO('MlpPolicy', env, policy_kwargs=policy_kwargs, verbose=0)
+    # Create and train the model with better hyperparameters for exploration
+    model = PPO('MlpPolicy', env, policy_kwargs=policy_kwargs, 
+                learning_rate=0.0003,
+                n_steps=2048,
+                batch_size=64,
+                ent_coef=0.01,  # Encourage exploration
+                verbose=0)
     model.learn(total_timesteps=total_timesteps, progress_bar=False)
     
     training_time = time.time() - start_time
     
     # Evaluate the model
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=n_eval_episodes)
+    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=n_eval_episodes, 
+                                              return_episode_rewards=False)
+    
+    # Get a sample episode for additional metrics
+    obs, _ = env.reset()
+    episode_reward = 0
+    episode_length = 0
+    episode_actions = []
+    done = False
+    
+    while not done and episode_length < 1000:  # Max 1000 steps
+        action, _ = model.predict(obs, deterministic=True)
+        episode_actions.append(int(action))
+        obs, reward, terminated, truncated, info = env.step(action)
+        episode_reward += reward
+        episode_length += 1
+        done = terminated or truncated
+    
+    # Calculate action diversity
+    action_0_count = episode_actions.count(0)
+    action_1_count = episode_actions.count(1)
     
     return {
         'mean_reward': float(mean_reward),
         'std_reward': float(std_reward),
-        'training_time': float(training_time)
+        'training_time': float(training_time),
+        'sample_episode_reward': float(episode_reward),
+        'sample_episode_length': int(episode_length),
+        'action_0_pct': float(action_0_count / len(episode_actions) * 100) if episode_actions else 0,
+        'action_1_pct': float(action_1_count / len(episode_actions) * 100) if episode_actions else 0
     }
 
 
@@ -108,42 +165,41 @@ def hyperparameter_search():
     print("=" * 80)
     print()
     
-    # Fetch historical data
-    ticker = 'AAPL'
-    end_date = datetime.datetime.now()
-    start_date = end_date - datetime.timedelta(days=59)
+    # Use synthetic data (built-in STOCKS_GOOGL dataset)
+    ticker = 'GOOGL (synthetic data)'
     
-    print(f"Fetching data for {ticker}...")
-    df = get_data_features(ticker, start_date, end_date)
-    print(f"Data fetched: {len(df)} rows")
+    print(f"Loading synthetic stock data for demonstration...")
+    df = get_data_features()
+    print(f"Data loaded: {len(df)} rows")
     print()
     
     # Environment parameters
-    window_size = 50
-    frame_bound = (50, len(df) - 1)
+    window_size = 10  # Reduced from 50 for faster training
+    # Use a reasonable frame bound that allows the model to trade
+    frame_bound = (window_size, min(500, len(df) - 1))
     
     # Define hyperparameter search space
     # Testing different network architectures
+    # Reduced set for faster execution
     network_configs = [
         {'net_arch': [64]},                    # Small: 1 layer, 64 neurons
         {'net_arch': [128]},                   # Small: 1 layer, 128 neurons
         {'net_arch': [64, 64]},                # Medium: 2 layers, 64 neurons each
         {'net_arch': [128, 128]},              # Medium: 2 layers, 128 neurons each
         {'net_arch': [256, 256]},              # Large: 2 layers, 256 neurons each
-        {'net_arch': [128, 64]},               # Medium: 2 layers, decreasing
-        {'net_arch': [64, 64, 64]},            # Deep: 3 layers, 64 neurons each
-        {'net_arch': [128, 128, 64]},          # Deep: 3 layers, decreasing
     ]
     
-    # Reduced timesteps for faster search (can be increased for production)
-    total_timesteps = 50000
-    n_eval_episodes = 5
+    # Optimized for reasonable execution time while still showing differences
+    # Increased timesteps to allow model to actually learn trading behavior
+    total_timesteps = 150000
+    n_eval_episodes = 10
     
     results = []
     
-    print(f"Starting hyperparameter search with {len(network_configs)} configurations...")
+    print(f"\nStarting hyperparameter search with {len(network_configs)} configurations...")
     print(f"Training timesteps per config: {total_timesteps:,}")
     print(f"Evaluation episodes: {n_eval_episodes}")
+    print(f"Note: Training with entropy bonus (ent_coef=0.01) for better exploration")
     print()
     print("-" * 80)
     
@@ -163,6 +219,8 @@ def hyperparameter_search():
             results.append(result)
             
             print(f"  Mean Reward: {result['mean_reward']:.2f} ± {result['std_reward']:.2f}")
+            print(f"  Sample Episode: Reward={result['sample_episode_reward']:.2f}, Length={result['sample_episode_length']}")
+            print(f"  Actions: Sell={result['action_0_pct']:.1f}%, Hold={result['action_1_pct']:.1f}%")
             print(f"  Training Time: {result['training_time']:.2f}s")
             
         except Exception as e:

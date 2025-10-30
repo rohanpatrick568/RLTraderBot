@@ -1,0 +1,70 @@
+[
+  {
+    "mean_reward": 0.0,
+    "std_reward": 0.0,
+    "training_time": 102.74810576438904,
+    "sample_episode_reward": 0.0,
+    "sample_episode_length": 489,
+    "action_0_pct": 0.0,
+    "action_1_pct": 100.0,
+    "config": [
+      64
+    ],
+    "total_params": 128
+  },
+  {
+    "mean_reward": 0.0,
+    "std_reward": 0.0,
+    "training_time": 103.0319836139679,
+    "sample_episode_reward": 0.0,
+    "sample_episode_length": 489,
+    "action_0_pct": 100.0,
+    "action_1_pct": 0.0,
+    "config": [
+      128
+    ],
+    "total_params": 256
+  },
+  {
+    "mean_reward": 0.0,
+    "std_reward": 0.0,
+    "training_time": 112.13841414451599,
+    "sample_episode_reward": 0.0,
+    "sample_episode_length": 489,
+    "action_0_pct": 0.0,
+    "action_1_pct": 100.0,
+    "config": [
+      64,
+      64
+    ],
+    "total_params": 256
+  },
+  {
+    "mean_reward": 0.0,
+    "std_reward": 0.0,
+    "training_time": 116.42992281913757,
+    "sample_episode_reward": 0.0,
+    "sample_episode_length": 489,
+    "action_0_pct": 0.0,
+    "action_1_pct": 100.0,
+    "config": [
+      128,
+      128
+    ],
+    "total_params": 512
+  },
+  {
+    "mean_reward": 0.0,
+    "std_reward": 0.0,
+    "training_time": 131.65853309631348,
+    "sample_episode_reward": 0.0,
+    "sample_episode_length": 489,
+    "action_0_pct": 0.0,
+    "action_1_pct": 100.0,
+    "config": [
+      256,
+      256
+    ],
+    "total_params": 1024
+  }
+]
