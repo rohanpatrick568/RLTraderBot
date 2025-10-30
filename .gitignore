@@ -1,0 +1,19 @@
+# Ignore environment files
+.env
+.env.*
+env/
+venv/
+.venv/
+*.env
+
+# Ignore config with secrets
+config.py
+
+# Common Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE / editor
+.vscode/
+.idea/
