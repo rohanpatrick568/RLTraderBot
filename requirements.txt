@@ -1,6 +1,8 @@
 gymnasium
+gym-anytrading
 lumibot
 numpy
 pandas
 stable-baselines3
 torch
+yfinance
