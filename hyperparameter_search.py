@@ -42,18 +42,18 @@ from stable_baselines3.common.vec_env import DummyVecEnv
 import pandas as pd
 
 
-def get_data_features(ticker=None, start_date=None, end_date=None, interval='1h'):
+# Constants
+MAX_EPISODE_LENGTH = 1000  # Maximum steps per episode during evaluation
+MAX_FRAME_BOUND = 500  # Maximum frame bound for training data
+
+
+def get_data_features():
     """
     Generate synthetic stock data for testing purposes.
-    
-    Args:
-        ticker: Stock symbol (e.g., 'AAPL') - not used for synthetic data
-        start_date: Start date for historical data - not used for synthetic data
-        end_date: End date for historical data - not used for synthetic data
-        interval: Data interval (default: '1h') - not used for synthetic data
+    Uses built-in STOCKS_GOOGL dataset from gym_anytrading.
     
     Returns:
-        DataFrame with synthetic stock data (using built-in dataset)
+        DataFrame with synthetic stock data
     """
     # Use built-in dataset from gym_anytrading
     from gym_anytrading.datasets import STOCKS_GOOGL
@@ -126,7 +126,7 @@ def train_and_evaluate_model(env, policy_kwargs, total_timesteps=100000, n_eval_
     episode_actions = []
     done = False
     
-    while not done and episode_length < 1000:  # Max 1000 steps
+    while not done and episode_length < MAX_EPISODE_LENGTH:
         action, _ = model.predict(obs, deterministic=True)
         episode_actions.append(int(action))
         obs, reward, terminated, truncated, info = env.step(action)
@@ -176,7 +176,7 @@ def hyperparameter_search():
     # Environment parameters
     window_size = 10  # Reduced from 50 for faster training
     # Use a reasonable frame bound that allows the model to trade
-    frame_bound = (window_size, min(500, len(df) - 1))
+    frame_bound = (window_size, min(MAX_FRAME_BOUND, len(df) - 1))
     
     # Define hyperparameter search space
     # Testing different network architectures
