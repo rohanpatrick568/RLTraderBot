@@ -1,0 +1,6 @@
+gymnasium
+lumibot
+numpy
+pandas
+stable-baselines3
+torch
