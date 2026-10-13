@@ -1,6 +1,11 @@
 gymnasium
+gym-anytrading
 lumibot
+matplotlib
 numpy
 pandas
+seaborn
 stable-baselines3
 torch
+tqdm
+yfinance
